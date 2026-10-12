@@ -37,16 +37,13 @@ object HealthConnectCore {
     }
 
     suspend fun status(context: Context): JSONObject {
-        val sdk = HealthConnectClient.getSdkStatus(context)
-        val granted = if (available(context)) grantedTypes(HealthConnectClient.getOrCreate(context)) else emptyList()
-        return JSONObject()
-            .put("available", sdk == HealthConnectClient.SDK_AVAILABLE)
-            .put("sdk_status", sdk)
-            .put("granted", JSONArray(granted))
+        val available = available(context)
+        val granted = if (available) grantedTypes(HealthConnectClient.getOrCreate(context)) else emptyList()
+        return JSONObject().put("available", available).put("granted", JSONArray(granted))
     }
 
     suspend fun read(context: Context, type: String, from: Instant, to: Instant): JSONObject {
-        val client = guard(context, type) ?: return error(context, type)
+        val client = connect(context, type)
         val range = TimeRangeFilter.between(from, to)
         val records = when (type) {
             "steps" -> readAll<StepsRecord>(client, range) {
@@ -83,7 +80,7 @@ object HealthConnectCore {
 
     /** Health Connect dedupes overlapping sources here; summing Read output would double count. */
     suspend fun aggregate(context: Context, type: String, from: Instant, to: Instant): JSONObject {
-        val client = guard(context, type) ?: return error(context, type)
+        val client = connect(context, type)
         val range = TimeRangeFilter.between(from, to)
         val out = JSONObject().put("type", type)
         when (type) {
@@ -126,17 +123,12 @@ object HealthConnectCore {
         .put("start", start.toString()).put("end", end.toString())
         .put("source", r.metadata.dataOrigin.packageName)
 
-    /** Client when the type is known, Health Connect is available and the permission is granted. */
-    private suspend fun guard(context: Context, type: String): HealthConnectClient? {
-        val perm = permission(type) ?: return null
-        if (!available(context)) return null
-        val client = HealthConnectClient.getOrCreate(context)
-        return client.takeIf { perm in it.permissionController.getGrantedPermissions() }
+    /** Throws (reported as { error }) when the type is unknown, Health Connect is unavailable or the permission is missing. */
+    private suspend fun connect(context: Context, type: String): HealthConnectClient {
+        val perm = permission(type) ?: error("unknown type '$type'")
+        if (!available(context)) error("unavailable")
+        return HealthConnectClient.getOrCreate(context).also {
+            if (perm !in it.permissionController.getGrantedPermissions()) error("permission_required")
+        }
     }
-
-    private suspend fun error(context: Context, type: String): JSONObject = JSONObject().put("error", when {
-        permission(type) == null -> "unknown type '$type'"
-        !available(context) -> "unavailable"
-        else -> "permission_required"
-    })
 }

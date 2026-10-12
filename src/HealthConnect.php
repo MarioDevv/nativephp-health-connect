@@ -10,7 +10,7 @@ class HealthConnect
 {
     public const TYPES = ['steps', 'distance', 'active_calories', 'heart_rate', 'weight', 'sleep', 'exercise'];
 
-    /** @return array{available:bool, sdk_status:int, granted:list<string>} */
+    /** @return array{available:bool, granted:list<string>} */
     public function status(): array
     {
         return $this->call('HealthConnect.Status');
@@ -25,18 +25,13 @@ class HealthConnect
     /** @return array{type:string, records:list<array>}|array{error:string} */
     public function read(string $type, DateTimeInterface|string $from, DateTimeInterface|string $to): array
     {
-        return $this->call('HealthConnect.Read', ['type' => $type, ...$this->range($from, $to)]);
+        return $this->call('HealthConnect.Read', ['type' => $type, 'from' => $this->iso($from), 'to' => $this->iso($to)]);
     }
 
     /** Deduplicated total, e.g. ['type' => 'steps', 'count' => 8423]. */
     public function aggregate(string $type, DateTimeInterface|string $from, DateTimeInterface|string $to): array
     {
-        return $this->call('HealthConnect.Aggregate', ['type' => $type, ...$this->range($from, $to)]);
-    }
-
-    private function range(DateTimeInterface|string $from, DateTimeInterface|string $to): array
-    {
-        return ['from' => $this->iso($from), 'to' => $this->iso($to)];
+        return $this->call('HealthConnect.Aggregate', ['type' => $type, 'from' => $this->iso($from), 'to' => $this->iso($to)]);
     }
 
     private function iso(DateTimeInterface|string $t): string

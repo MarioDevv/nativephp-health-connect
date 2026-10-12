@@ -33,7 +33,7 @@ HealthConnect::requestPermissions(['steps', 'sleep']);   // default: all types
 
 // 2. Check what was granted (poll, e.g. on page load).
 HealthConnect::status();
-// ['available' => true, 'sdk_status' => 3, 'granted' => ['steps', 'sleep']]
+// ['available' => true, 'granted' => ['steps', 'sleep']]
 
 // 3. Totals (deduplicated across sources).
 HealthConnect::aggregate('steps', now()->subDay(), now());
