@@ -12,7 +12,8 @@ class HealthConnectPermissionActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val types = intent.getStringArrayExtra("types")?.toList() ?: HealthConnectCore.types
-        val permissions = types.mapNotNull { HealthConnectCore.permission(it) }.toSet()
+        val write = intent.getBooleanExtra("write", false)
+        val permissions = types.flatMap { listOfNotNull(HealthConnectCore.permission(it), if (write) HealthConnectCore.writePermission(it) else null) }.toSet()
         if (permissions.isEmpty()) finish() else launcher.launch(permissions)
     }
 }

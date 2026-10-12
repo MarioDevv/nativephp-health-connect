@@ -20,6 +20,12 @@
             "description": "Read records of one data type in a time range"
         },
         {
+            "name": "HealthConnect.Write",
+            "android": "com.mariodevv.plugins.healthconnect.HealthConnectFunctions.Write",
+            "android_params": ["context"],
+            "description": "Write steps or a weight measurement"
+        },
+        {
             "name": "HealthConnect.Aggregate",
             "android": "com.mariodevv.plugins.healthconnect.HealthConnectFunctions.Aggregate",
             "android_params": ["context"],
@@ -35,7 +41,9 @@
             "android.permission.health.READ_HEART_RATE",
             "android.permission.health.READ_WEIGHT",
             "android.permission.health.READ_SLEEP",
-            "android.permission.health.READ_EXERCISE"
+            "android.permission.health.READ_EXERCISE",
+            "android.permission.health.WRITE_STEPS",
+            "android.permission.health.WRITE_WEIGHT"
         ],
         "dependencies": {
             "implementation": ["androidx.health.connect:connect-client:1.1.0"]

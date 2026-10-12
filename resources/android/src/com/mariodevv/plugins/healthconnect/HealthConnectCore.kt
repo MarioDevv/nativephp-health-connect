@@ -4,9 +4,11 @@ import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import androidx.health.connect.client.units.Mass
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
@@ -28,18 +30,26 @@ object HealthConnectCore {
         else -> null
     }
 
+    /** Types that can be written (1.1: steps and weight). */
+    fun writePermission(type: String): String? = when (type) {
+        "steps" -> HealthPermission.getWritePermission(StepsRecord::class)
+        "weight" -> HealthPermission.getWritePermission(WeightRecord::class)
+        else -> null
+    }
+
     fun available(context: Context) =
         HealthConnectClient.getSdkStatus(context) == HealthConnectClient.SDK_AVAILABLE
 
-    private suspend fun grantedTypes(client: HealthConnectClient): List<String> {
-        val granted = client.permissionController.getGrantedPermissions()
-        return types.filter { permission(it) in granted }
-    }
-
     suspend fun status(context: Context): JSONObject {
         val available = available(context)
-        val granted = if (available) grantedTypes(HealthConnectClient.getOrCreate(context)) else emptyList()
-        return JSONObject().put("available", available).put("granted", JSONArray(granted))
+        val granted = if (available) {
+            HealthConnectClient.getOrCreate(context).permissionController.getGrantedPermissions()
+        } else {
+            emptySet()
+        }
+        return JSONObject().put("available", available)
+            .put("granted", JSONArray(types.filter { permission(it) in granted }))
+            .put("writable", JSONArray(types.filter { writePermission(it)?.let { w -> w in granted } == true }))
     }
 
     suspend fun read(context: Context, type: String, from: Instant, to: Instant): JSONObject {
@@ -98,6 +108,26 @@ object HealthConnectCore {
         return out
     }
 
+    /** steps: count, from, to. weight: kg, time (default now). */
+    suspend fun write(context: Context, type: String, p: Map<String, Any>): JSONObject {
+        val client = connect(context, type, write = true)
+        val record = when (type) {
+            "steps" -> StepsRecord(
+                count = (p["count"] as Number).toLong(),
+                startTime = Instant.parse(p["from"] as String), startZoneOffset = null,
+                endTime = Instant.parse(p["to"] as String), endZoneOffset = null,
+                metadata = Metadata.manualEntry(),
+            )
+            else -> WeightRecord(
+                weight = Mass.kilograms((p["kg"] as Number).toDouble()),
+                time = (p["time"] as? String)?.let(Instant::parse) ?: Instant.now(), zoneOffset = null,
+                metadata = Metadata.manualEntry(),
+            )
+        }
+        client.insertRecords(listOf(record))
+        return JSONObject().put("type", type).put("written", 1)
+    }
+
     private suspend fun <T : Any> agg(
         client: HealthConnectClient,
         metric: androidx.health.connect.client.aggregate.AggregateMetric<T>,
@@ -124,8 +154,9 @@ object HealthConnectCore {
         .put("source", r.metadata.dataOrigin.packageName)
 
     /** Throws (reported as { error }) when the type is unknown, Health Connect is unavailable or the permission is missing. */
-    private suspend fun connect(context: Context, type: String): HealthConnectClient {
-        val perm = permission(type) ?: error("unknown type '$type'")
+    private suspend fun connect(context: Context, type: String, write: Boolean = false): HealthConnectClient {
+        val perm = (if (write) writePermission(type) else permission(type))
+            ?: error(if (write) "write not supported for '$type'" else "unknown type '$type'")
         if (!available(context)) error("unavailable")
         return HealthConnectClient.getOrCreate(context).also {
             if (perm !in it.permissionController.getGrantedPermissions()) error("permission_required")

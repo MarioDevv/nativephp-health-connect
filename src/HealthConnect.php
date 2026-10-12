@@ -10,16 +10,30 @@ class HealthConnect
 {
     public const TYPES = ['steps', 'distance', 'active_calories', 'heart_rate', 'weight', 'sleep', 'exercise'];
 
-    /** @return array{available:bool, granted:list<string>} */
+    /** @return array{available:bool, granted:list<string>, writable:list<string>} */
     public function status(): array
     {
         return $this->call('HealthConnect.Status');
     }
 
-    /** Opens the system dialog. It is async: poll status() for the result. */
-    public function requestPermissions(array $types = self::TYPES): array
+    /** Opens the system dialog. It is async: poll status() for the result. $write also asks write access (steps, weight). */
+    public function requestPermissions(array $types = self::TYPES, bool $write = false): array
     {
-        return $this->call('HealthConnect.RequestPermissions', ['types' => array_values($types)]);
+        return $this->call('HealthConnect.RequestPermissions', ['types' => array_values($types), 'write' => $write]);
+    }
+
+    /**
+     * Writes one record. steps: ['count' => 1200, 'from' => ..., 'to' => ...]. weight: ['kg' => 72.5, 'time' => ...] (time defaults to now).
+     *
+     * @return array{type:string, written:int}|array{error:string}
+     */
+    public function write(string $type, array $data): array
+    {
+        foreach (['from', 'to', 'time'] as $k) {
+            isset($data[$k]) && $data[$k] = $this->iso($data[$k]);
+        }
+
+        return $this->call('HealthConnect.Write', ['type' => $type, ...$data]);
     }
 
     /** @return array{type:string, records:list<array>}|array{error:string} */

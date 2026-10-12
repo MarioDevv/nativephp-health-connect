@@ -16,7 +16,8 @@ it('keeps manifest, Kotlin, PHP and permissions in sync', function () {
     // every PHP type has a Kotlin permission branch, and a declared READ_* permission
     preg_match("/TYPES = \[(.+?)\]/", $php, $m);
     $types = array_map(fn ($t) => trim($t, " '"), explode(',', $m[1]));
-    expect($types)->toHaveCount(count($manifest['android']['permissions']));
+    $reads = array_filter($manifest['android']['permissions'], fn ($x) => str_contains($x, '.READ_'));
+    expect($types)->toHaveCount(count($reads));
     foreach ($types as $t) {
         expect($kotlin)->toContain("\"$t\" ->");
     }

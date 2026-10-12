@@ -28,7 +28,7 @@ object HealthConnectFunctions {
         override fun execute(parameters: Map<String, Any>) = reply { HealthConnectCore.status(context) }
     }
 
-    /** Parameters: types: string[] (default all). Result arrives asynchronously: poll Status. */
+    /** Parameters: types: string[] (default all), write: bool (also ask write access where supported). Result arrives asynchronously: poll Status. */
     class RequestPermissions(private val activity: FragmentActivity) : BridgeFunction {
         override fun execute(parameters: Map<String, Any>) = reply {
             if (!HealthConnectCore.available(activity)) return@reply JSONObject().put("error", "unavailable")
@@ -36,6 +36,7 @@ object HealthConnectFunctions {
             Handler(Looper.getMainLooper()).post {
                 activity.startActivity(Intent(activity, HealthConnectPermissionActivity::class.java).apply {
                     types?.let { putExtra("types", it.toTypedArray()) }
+                    putExtra("write", parameters["write"] == true)
                 })
             }
             JSONObject().put("status", "permission_requested")
@@ -55,6 +56,13 @@ object HealthConnectFunctions {
         override fun execute(parameters: Map<String, Any>) = reply {
             val (from, to) = range(parameters)
             HealthConnectCore.aggregate(context, parameters["type"] as String, from, to)
+        }
+    }
+
+    /** Parameters: type, plus steps: count, from, to; weight: kg, time. */
+    class Write(private val context: Context) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>) = reply {
+            HealthConnectCore.write(context, parameters["type"] as String, parameters)
         }
     }
 }
