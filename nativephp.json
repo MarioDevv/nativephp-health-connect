@@ -1,0 +1,46 @@
+{
+    "namespace": "HealthConnect",
+    "bridge_functions": [
+        {
+            "name": "HealthConnect.Status",
+            "android": "com.mariodevv.plugins.healthconnect.HealthConnectFunctions.Status",
+            "android_params": ["context"],
+            "description": "Health Connect availability and which data types are granted"
+        },
+        {
+            "name": "HealthConnect.RequestPermissions",
+            "android": "com.mariodevv.plugins.healthconnect.HealthConnectFunctions.RequestPermissions",
+            "android_params": ["activity"],
+            "description": "Open the Health Connect permission dialog for the given data types"
+        },
+        {
+            "name": "HealthConnect.Read",
+            "android": "com.mariodevv.plugins.healthconnect.HealthConnectFunctions.Read",
+            "android_params": ["context"],
+            "description": "Read records of one data type in a time range"
+        },
+        {
+            "name": "HealthConnect.Aggregate",
+            "android": "com.mariodevv.plugins.healthconnect.HealthConnectFunctions.Aggregate",
+            "android_params": ["context"],
+            "description": "Deduplicated totals (steps, distance, calories, sleep, heart rate) in a time range"
+        }
+    ],
+    "android": {
+        "min_version": 34,
+        "permissions": [
+            "android.permission.health.READ_STEPS",
+            "android.permission.health.READ_DISTANCE",
+            "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+            "android.permission.health.READ_HEART_RATE",
+            "android.permission.health.READ_WEIGHT",
+            "android.permission.health.READ_SLEEP",
+            "android.permission.health.READ_EXERCISE"
+        ],
+        "dependencies": {
+            "implementation": ["androidx.health.connect:connect-client:1.1.0"]
+        }
+    },
+    "ios": { "min_version": "18.2" },
+    "events": []
+}
