@@ -30,7 +30,9 @@ class HealthConnect
     public function write(string $type, array $data): array
     {
         foreach (['from', 'to', 'time'] as $k) {
-            isset($data[$k]) && $data[$k] = $this->iso($data[$k]);
+            if (isset($data[$k])) {
+                $data[$k] = $this->iso($data[$k]);
+            }
         }
 
         return $this->call('HealthConnect.Write', ['type' => $type, ...$data]);

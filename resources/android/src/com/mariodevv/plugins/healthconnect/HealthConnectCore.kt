@@ -49,7 +49,7 @@ object HealthConnectCore {
         }
         return JSONObject().put("available", available)
             .put("granted", JSONArray(types.filter { permission(it) in granted }))
-            .put("writable", JSONArray(types.filter { writePermission(it)?.let { w -> w in granted } == true }))
+            .put("writable", JSONArray(types.filter { writePermission(it) in granted }))
     }
 
     suspend fun read(context: Context, type: String, from: Instant, to: Instant): JSONObject {
